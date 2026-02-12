@@ -12,47 +12,102 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { ReportDetail } from "@/components/report-detail"
 import { ReportList } from "@/components/report-list"
 import { EmptyState } from "@/components/empty-state"
-import {
-  mockProjects,
-  mockReleases,
-  mockReleasesByProject,
-  mockRuns,
-  buildProjectTree,
-} from "@/lib/mock-data"
+import { api } from "@/lib/api-client"
+import { Project, Release, Run, buildProjectTree } from "@/lib/mock-data"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
 
 export function Dashboard() {
   const [selectedRunId, setSelectedRunId] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [projects, setProjects] = React.useState<Project[]>([])
+  const [releases, setReleases] = React.useState<Release[]>([])
+  const [runs, setRuns] = React.useState<Run[]>([])
+  const [releasesByProject, setReleasesByProject] = React.useState<Record<string, Release[]>>({})
+  const [isLoading, setIsLoading] = React.useState(true)
+
+  // Fetch all data on mount
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true)
+        
+        // Fetch projects
+        const projectsData: Project[] = await api.projects.getAll()
+        setProjects(projectsData)
+
+        // Fetch releases for each project
+        const releasesByProjectMap: Record<string, Release[]> = {}
+        const allReleases: Release[] = []
+        const allRuns: Run[] = []
+
+        for (const project of projectsData) {
+          try {
+            const projectReleases: Release[] = await api.releases.getByProject(project.project_key)
+            releasesByProjectMap[project.project_key] = projectReleases
+            allReleases.push(...projectReleases)
+
+            // Fetch runs for each release
+            for (const release of projectReleases) {
+              try {
+                const releaseRuns: Run[] = await api.releases.getRuns(release.id)
+                allRuns.push(...releaseRuns)
+              } catch (err) {
+                console.error(`Error fetching runs for release ${release.id}:`, err)
+              }
+            }
+          } catch (err) {
+            console.error(`Error fetching releases for project ${project.project_key}:`, err)
+          }
+        }
+
+        setReleasesByProject(releasesByProjectMap)
+        setReleases(allReleases)
+        setRuns(allRuns)
+      } catch (error) {
+        console.error("Error fetching data:", error)
+        toast.error("Failed to load data. Please try again.")
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const tree = React.useMemo(
-    () =>
-      buildProjectTree(
-        mockProjects,
-        mockReleases,
-        mockRuns,
-        mockReleasesByProject
-      ),
-    []
+    () => buildProjectTree(projects, releases, runs, releasesByProject),
+    [projects, releases, runs, releasesByProject]
   )
 
   // Derive all context from the selected run
   const selectedRun = selectedRunId
-    ? mockRuns.find((r) => r.id === selectedRunId) ?? null
+    ? runs.find((r) => r.id === selectedRunId) ?? null
     : null
 
   const selectedRelease = selectedRun
-    ? mockReleases.find((rel) => rel.id === selectedRun.release) ?? null
+    ? releases.find((rel) => rel.id === selectedRun.release) ?? null
     : null
 
   const selectedProject = selectedRun
-    ? mockProjects.find((p) => p.project_key === selectedRun.project_key) ??
-      null
+    ? projects.find((p) => p.project_key === selectedRun.project_key) ?? null
     : null
 
   // All runs in the same release (for the table below)
   const releaseRuns = selectedRelease
-    ? mockRuns.filter((r) => r.release === selectedRelease.id)
+    ? runs.filter((r) => r.release === selectedRelease.id)
     : []
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading projects...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <SidebarProvider>

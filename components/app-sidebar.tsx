@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  LogOut,
+  User,
 } from "lucide-react"
 
 import {
@@ -24,6 +26,7 @@ import {
   SidebarMenuItem,
   SidebarInput,
   SidebarSeparator,
+  SidebarFooter,
 } from "@/components/ui/sidebar"
 import {
   Collapsible,
@@ -31,7 +34,9 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import type { Run, ProjectTree } from "@/lib/mock-data"
+import { useAuth } from "@/lib/auth-context"
 
 function getStatusIcon(status: Run["run_status"]) {
   switch (status) {
@@ -59,6 +64,8 @@ export function AppSidebar({
   searchQuery,
   onSearchChange,
 }: AppSidebarProps) {
+  const { logout } = useAuth()
+
   const filteredTree = React.useMemo(() => {
     if (!searchQuery.trim()) return tree
 
@@ -212,6 +219,18 @@ export function AppSidebar({
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
+
+      <SidebarFooter className="p-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={logout}
+          className="w-full justify-start gap-2"
+        >
+          <LogOut className="h-4 w-4" />
+          Logout
+        </Button>
+      </SidebarFooter>
     </Sidebar>
   )
 }
