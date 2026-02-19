@@ -1,228 +1,248 @@
 "use client"
 
 import * as React from "react"
-
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AppSidebar } from "@/components/app-sidebar"
-import { ReportDetail } from "@/components/report-detail"
-import { ReportList } from "@/components/report-list"
-import { EmptyState } from "@/components/empty-state"
-import { LoadTestResultsList } from "@/components/load-test-results-list"
-import { PytestResultsList } from "@/components/pytest-results-list"
-import { LoadTestDetail } from "@/components/load-test-detail"
-import { PytestDetail } from "@/components/pytest-detail"
-import { api } from "@/lib/api-client"
-import { Project, Release, Run, buildProjectTree, mockPytestResults, PytestResult } from "@/lib/mock-data"
-import { Loader2 } from "lucide-react"
-import { toast } from "sonner"
+import { mockPytestResults, mockRuns } from "@/lib/mock-data"
 
 export function Dashboard() {
-  const [selectedTab, setSelectedTab] = React.useState<"load-test" | "pytest">("load-test")
-  const [selectedRunId, setSelectedRunId] = React.useState<string | null>(null)
-  const [selectedPytestId, setSelectedPytestId] = React.useState<string | null>(null)
-  const [searchQuery, setSearchQuery] = React.useState("")
-  const [projects, setProjects] = React.useState<Project[]>([])
-  const [releases, setReleases] = React.useState<Release[]>([])
-  const [runs, setRuns] = React.useState<Run[]>([])
-  const [releasesByProject, setReleasesByProject] = React.useState<Record<string, Release[]>>({})
-  const [pytestResults, setPytestResults] = React.useState<PytestResult[]>([])
-  const [isLoading, setIsLoading] = React.useState(true)
+  const [activeTab, setActiveTab] = React.useState<"load-test" | "pytest">("load-test")
+  const [selectedId, setSelectedId] = React.useState<string | null>(null)
 
-  // Fetch all data on mount
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true)
-        
-        // Fetch projects
-        const projectsData: Project[] = await api.projects.getAll()
-        setProjects(projectsData)
-
-        // Fetch releases for each project
-        const releasesByProjectMap: Record<string, Release[]> = {}
-        const allReleases: Release[] = []
-        const allRuns: Run[] = []
-
-        for (const project of projectsData) {
-          try {
-            const projectReleases: Release[] = await api.releases.getByProject(project.project_key)
-            releasesByProjectMap[project.project_key] = projectReleases
-            allReleases.push(...projectReleases)
-
-            // Fetch runs for each release
-            for (const release of projectReleases) {
-              try {
-                const releaseRuns: Run[] = await api.releases.getRuns(release.id)
-                allRuns.push(...releaseRuns)
-              } catch (err) {
-                console.error(`Error fetching runs for release ${release.id}:`, err)
-              }
-            }
-          } catch (err) {
-            console.error(`Error fetching releases for project ${project.project_key}:`, err)
-          }
-        }
-
-        setReleasesByProject(releasesByProjectMap)
-        setReleases(allReleases)
-        setRuns(allRuns)
-        
-        // Load pytest results (using mock data for now)
-        setPytestResults(mockPytestResults)
-      } catch (error) {
-        console.error("Error fetching data:", error)
-        toast.error("Failed to load data. Please try again.")
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
-  const tree = React.useMemo(
-    () => buildProjectTree(projects, releases, runs, releasesByProject),
-    [projects, releases, runs, releasesByProject]
-  )
-
-  // Derive all context from the selected run
-  const selectedRun = selectedRunId
-    ? runs.find((r) => r.id === selectedRunId) ?? null
-    : null
-
-  const selectedRelease = selectedRun
-    ? releases.find((rel) => rel.id === selectedRun.release) ?? null
-    : null
-
-  const selectedProject = selectedRun
-    ? projects.find((p) => p.project_key === selectedRun.project_key) ?? null
-    : null
-
-  // All runs in the same release (for the table below)
-  const releaseRuns = selectedRelease
-    ? runs.filter((r) => r.release === selectedRelease.id)
-    : []
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading projects...</p>
-        </div>
-      </div>
-    )
-  }
+  const selectedLoadTest = selectedId ? mockRuns.find(r => r.id === selectedId) : null
+  const selectedPytest = selectedId ? mockPytestResults.find(p => p.id === selectedId) : null
 
   return (
-    <SidebarProvider>
-      <AppSidebar
-        tree={tree}
-        selectedRunId={selectedRunId}
-        onSelectRun={setSelectedRunId}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-      />
-      <SidebarInset>
-        {/* Top Bar */}
-        <header className="flex h-12 items-center gap-3 border-b border-border px-4">
-          <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-          <Separator orientation="vertical" className="h-4 bg-border" />
-          <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            {selectedProject && selectedRelease && selectedRun ? (
-              <>
-                <span className="text-foreground">
-                  {selectedProject.name}
-                </span>
-                <span>/</span>
-                <span className="text-foreground">
-                  {selectedRelease.name}
-                </span>
-                <span>/</span>
-                <span className="text-muted-foreground truncate max-w-[200px]">
-                  {selectedRun.name}
-                </span>
-              </>
-            ) : (
-              <span className="text-muted-foreground">
-                Select a run to view
-              </span>
-            )}
-          </nav>
-        </header>
-
-        {/* Main Content */}
-        <div className="flex-1 overflow-auto p-6">
-          <Tabs value={selectedTab} onValueChange={(val) => setSelectedTab(val as "load-test" | "pytest")} className="w-full">
-            <div className="flex items-center justify-between gap-4 mb-6">
-              <div>
-                <h1 className="text-2xl font-bold">Test Results</h1>
-                <p className="text-sm text-muted-foreground">View load test and pytest results</p>
-              </div>
-              <TabsList className="grid w-fit grid-cols-2">
-                <TabsTrigger value="load-test" className="flex gap-2">
-                  <span>Load Tests</span>
-                </TabsTrigger>
-                <TabsTrigger value="pytest" className="flex gap-2">
-                  <span>Pytest</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="load-test" className="space-y-6">
-              {selectedRun && selectedRelease && selectedProject ? (
-                <div className="flex flex-col gap-8">
-                  <ReportDetail
-                    run={selectedRun}
-                    release={selectedRelease}
-                    project={selectedProject}
-                  />
-                  <Separator className="bg-border" />
-                  <ReportList
-                    project={selectedProject}
-                    release={selectedRelease}
-                    runs={releaseRuns}
-                    selectedRunId={selectedRunId}
-                    onSelectRun={setSelectedRunId}
-                  />
-                </div>
-              ) : (
-                <LoadTestResultsList
-                  runs={runs}
-                  selectedRunId={selectedRunId}
-                  onSelectRun={setSelectedRunId}
-                />
-              )}
-            </TabsContent>
-
-            <TabsContent value="pytest" className="space-y-6">
-              {selectedPytestId && pytestResults.find(p => p.id === selectedPytestId) ? (
-                <div className="flex flex-col gap-8">
-                  <PytestDetail resultId={selectedPytestId} />
-                  <Separator className="bg-border" />
-                  <PytestResultsList
-                    results={pytestResults}
-                    selectedId={selectedPytestId}
-                    onSelectResult={setSelectedPytestId}
-                  />
-                </div>
-              ) : (
-                <PytestResultsList
-                  results={pytestResults}
-                  selectedId={selectedPytestId}
-                  onSelectResult={setSelectedPytestId}
-                />
-              )}
-            </TabsContent>
-          </Tabs>
+    <div className="min-h-screen bg-slate-950 text-slate-50">
+      {/* Header */}
+      <header className="border-b border-slate-800 bg-slate-900/50 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <h1 className="text-3xl font-bold">Test Results Hub</h1>
+          <p className="text-slate-400 text-sm mt-1">Load Tests & Pytest Results</p>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+      </header>
+
+      {/* Tab Navigation */}
+      <div className="border-b border-slate-800 bg-slate-900/30">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab("load-test")}
+              className={`px-4 py-3 font-medium border-b-2 transition ${
+                activeTab === "load-test"
+                  ? "border-blue-500 text-blue-400"
+                  : "border-transparent text-slate-400 hover:text-slate-300"
+              }`}
+            >
+              Load Tests
+            </button>
+            <button
+              onClick={() => setActiveTab("pytest")}
+              className={`px-4 py-3 font-medium border-b-2 transition ${
+                activeTab === "pytest"
+                  ? "border-blue-500 text-blue-400"
+                  : "border-transparent text-slate-400 hover:text-slate-300"
+              }`}
+            >
+              Pytest
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* List Panel */}
+          <div className="lg:col-span-1 bg-slate-900 rounded-lg border border-slate-800 overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-slate-800">
+              <h2 className="font-semibold text-lg">Results</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {activeTab === "load-test" ? (
+                // Load Test Results List
+                <div className="divide-y divide-slate-800">
+                  {mockRuns.map((run) => (
+                    <button
+                      key={run.id}
+                      onClick={() => setSelectedId(run.id)}
+                      className={`w-full text-left p-4 transition border-l-2 ${
+                        selectedId === run.id
+                          ? "bg-slate-800 border-l-blue-500"
+                          : "border-l-transparent hover:bg-slate-800/50"
+                      }`}
+                    >
+                      <div className="font-medium text-sm truncate">{run.name}</div>
+                      <div className="text-xs text-slate-400 mt-1">{run.project_key}</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full ${
+                            run.run_status === "passed" ? "bg-green-500" : "bg-red-500"
+                          }`}
+                        />
+                        <span className="text-xs">{run.run_status}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                // Pytest Results List
+                <div className="divide-y divide-slate-800">
+                  {mockPytestResults.map((result) => (
+                    <button
+                      key={result.id}
+                      onClick={() => setSelectedId(result.id)}
+                      className={`w-full text-left p-4 transition border-l-2 ${
+                        selectedId === result.id
+                          ? "bg-slate-800 border-l-blue-500"
+                          : "border-l-transparent hover:bg-slate-800/50"
+                      }`}
+                    >
+                      <div className="font-medium text-sm truncate">{result.name}</div>
+                      <div className="text-xs text-slate-400 mt-1">{result.project_key}</div>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full ${
+                            result.test_status === "passed"
+                              ? "bg-green-500"
+                              : result.test_status === "failed"
+                                ? "bg-red-500"
+                                : "bg-yellow-500"
+                          }`}
+                        />
+                        <span className="text-xs">{result.test_status}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Detail Panel */}
+          <div className="lg:col-span-2">
+            {activeTab === "load-test" ? (
+              selectedLoadTest ? (
+                <div className="bg-slate-900 rounded-lg border border-slate-800 p-6 space-y-6">
+                  <div>
+                    <h2 className="text-2xl font-bold">{selectedLoadTest.name}</h2>
+                    <p className="text-slate-400 mt-1">{selectedLoadTest.project_key} / {selectedLoadTest.release}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="bg-slate-800 rounded p-4">
+                      <div className="text-xs text-slate-400">Avg Response Time</div>
+                      <div className="text-xl font-bold mt-1">{selectedLoadTest.avg_response_time}</div>
+                    </div>
+                    <div className="bg-slate-800 rounded p-4">
+                      <div className="text-xs text-slate-400">Error Rate</div>
+                      <div className="text-xl font-bold mt-1">{selectedLoadTest.error_rate}</div>
+                    </div>
+                    <div className="bg-slate-800 rounded p-4">
+                      <div className="text-xs text-slate-400">Throughput</div>
+                      <div className="text-xl font-bold mt-1">{selectedLoadTest.throughput}</div>
+                    </div>
+                    <div className="bg-slate-800 rounded p-4">
+                      <div className="text-xs text-slate-400">Virtual Users</div>
+                      <div className="text-xl font-bold mt-1">{selectedLoadTest.v_users}</div>
+                    </div>
+                    <div className="bg-slate-800 rounded p-4">
+                      <div className="text-xs text-slate-400">Duration</div>
+                      <div className="text-xl font-bold mt-1">{selectedLoadTest.duration}</div>
+                    </div>
+                    <div className="bg-slate-800 rounded p-4">
+                      <div className="text-xs text-slate-400">Status</div>
+                      <div className="text-sm font-bold mt-1 capitalize">
+                        <span
+                          className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                            selectedLoadTest.run_status === "passed" ? "bg-green-500" : "bg-red-500"
+                          }`}
+                        />
+                        {selectedLoadTest.run_status}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-800 rounded p-4">
+                    <div className="text-sm text-slate-400">Started At</div>
+                    <div className="text-sm mt-1">
+                      {new Date(selectedLoadTest.started_at).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-slate-900 rounded-lg border border-slate-800 p-12 text-center">
+                  <p className="text-slate-400">Select a load test to view details</p>
+                </div>
+              )
+            ) : selectedPytest ? (
+              <div className="bg-slate-900 rounded-lg border border-slate-800 p-6 space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold">{selectedPytest.name}</h2>
+                  <p className="text-slate-400 mt-1">{selectedPytest.project_key} / {selectedPytest.release}</p>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div className="bg-slate-800 rounded p-4">
+                    <div className="text-xs text-slate-400">Total Tests</div>
+                    <div className="text-xl font-bold mt-1">{selectedPytest.total_tests}</div>
+                  </div>
+                  <div className="bg-green-900/30 rounded p-4 border border-green-800">
+                    <div className="text-xs text-green-400">Passed</div>
+                    <div className="text-xl font-bold mt-1 text-green-400">{selectedPytest.passed_tests}</div>
+                  </div>
+                  <div className="bg-red-900/30 rounded p-4 border border-red-800">
+                    <div className="text-xs text-red-400">Failed</div>
+                    <div className="text-xl font-bold mt-1 text-red-400">{selectedPytest.failed_tests}</div>
+                  </div>
+                  <div className="bg-yellow-900/30 rounded p-4 border border-yellow-800">
+                    <div className="text-xs text-yellow-400">Skipped</div>
+                    <div className="text-xl font-bold mt-1 text-yellow-400">{selectedPytest.skipped_tests}</div>
+                  </div>
+                  <div className="bg-blue-900/30 rounded p-4 border border-blue-800">
+                    <div className="text-xs text-blue-400">Success Rate</div>
+                    <div className="text-xl font-bold mt-1 text-blue-400">{selectedPytest.success_rate.toFixed(2)}%</div>
+                  </div>
+                  <div className="bg-slate-800 rounded p-4">
+                    <div className="text-xs text-slate-400">Duration</div>
+                    <div className="text-xl font-bold mt-1">{selectedPytest.duration}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-3">Test Cases ({selectedPytest.test_cases.length})</h3>
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {selectedPytest.test_cases.map((testCase, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded border ${
+                          testCase.status === "passed"
+                            ? "bg-green-900/20 border-green-800"
+                            : testCase.status === "failed"
+                              ? "bg-red-900/20 border-red-800"
+                              : "bg-yellow-900/20 border-yellow-800"
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <div className="font-mono text-sm">{testCase.name}</div>
+                            {testCase.error && (
+                              <div className="text-xs text-slate-400 mt-1 italic">{testCase.error}</div>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-400">{testCase.duration}s</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-900 rounded-lg border border-slate-800 p-12 text-center">
+                <p className="text-slate-400">Select a pytest result to view details</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
   )
 }
