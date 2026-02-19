@@ -427,3 +427,391 @@ export const mockRuns: Run[] = [
     project_key: "order-mgmt",
   },
 ]
+
+// -------------------------------------------------------------------
+// Pytest Types and Mock Data
+// -------------------------------------------------------------------
+
+export interface PytestResult {
+  id: string
+  name: string
+  test_status: "passed" | "failed" | "warning"
+  started_by: string
+  started_at: string
+  release: string
+  project_key: string
+  duration: string
+  total_tests: number
+  passed_tests: number
+  failed_tests: number
+  skipped_tests: number
+  success_rate: number
+  test_cases: TestCase[]
+}
+
+export interface TestCase {
+  name: string
+  status: "passed" | "failed" | "skipped"
+  duration: number
+  error?: string
+}
+
+export const mockPytestResults: PytestResult[] = [
+  // Payment Gateway pytest — 3.2.0
+  {
+    id: "pytest-1-1-1",
+    name: "Unit Tests - Payment Processing",
+    test_status: "passed",
+    started_by: "ci-pipeline",
+    started_at: "2026-02-05T14:00:00Z",
+    release: "rel-1-1",
+    project_key: "payment-gateway",
+    duration: "2m 45s",
+    total_tests: 156,
+    passed_tests: 154,
+    failed_tests: 1,
+    skipped_tests: 1,
+    success_rate: 98.72,
+    test_cases: [
+      {
+        name: "test_payment_validation",
+        status: "passed",
+        duration: 0.12,
+      },
+      {
+        name: "test_card_encryption",
+        status: "passed",
+        duration: 0.18,
+      },
+      {
+        name: "test_refund_processing",
+        status: "failed",
+        duration: 0.45,
+        error: "AssertionError: Refund status not updated correctly",
+      },
+      {
+        name: "test_webhook_notification",
+        status: "skipped",
+        duration: 0,
+      },
+    ],
+  },
+  {
+    id: "pytest-1-1-2",
+    name: "Integration Tests - Payment API",
+    test_status: "passed",
+    started_by: "ci-pipeline",
+    started_at: "2026-02-05T14:15:00Z",
+    release: "rel-1-1",
+    project_key: "payment-gateway",
+    duration: "5m 20s",
+    total_tests: 89,
+    passed_tests: 87,
+    failed_tests: 2,
+    skipped_tests: 0,
+    success_rate: 97.75,
+    test_cases: [
+      {
+        name: "test_api_payment_creation",
+        status: "passed",
+        duration: 0.52,
+      },
+      {
+        name: "test_api_payment_status",
+        status: "passed",
+        duration: 0.38,
+      },
+      {
+        name: "test_api_refund_endpoint",
+        status: "failed",
+        duration: 1.23,
+        error: "TimeoutError: API response took > 5s",
+      },
+    ],
+  },
+  // Payment Gateway pytest — 3.1.0
+  {
+    id: "pytest-1-2-1",
+    name: "Unit Tests - Payment Processing",
+    test_status: "failed",
+    started_by: "jane.smith",
+    started_at: "2026-01-15T09:30:00Z",
+    release: "rel-1-2",
+    project_key: "payment-gateway",
+    duration: "3m 10s",
+    total_tests: 156,
+    passed_tests: 145,
+    failed_tests: 8,
+    skipped_tests: 3,
+    success_rate: 92.95,
+    test_cases: [
+      {
+        name: "test_payment_validation",
+        status: "passed",
+        duration: 0.12,
+      },
+      {
+        name: "test_card_encryption",
+        status: "failed",
+        duration: 0.78,
+        error: "AssertionError: Encryption key mismatch",
+      },
+    ],
+  },
+  // User Auth Service pytest — 2.5.0
+  {
+    id: "pytest-2-1-1",
+    name: "Unit Tests - Authentication",
+    test_status: "passed",
+    started_by: "ci-pipeline",
+    started_at: "2026-02-08T10:30:00Z",
+    release: "rel-2-1",
+    project_key: "user-auth",
+    duration: "1m 55s",
+    total_tests: 203,
+    passed_tests: 201,
+    failed_tests: 1,
+    skipped_tests: 1,
+    success_rate: 99.01,
+    test_cases: [
+      {
+        name: "test_jwt_generation",
+        status: "passed",
+        duration: 0.08,
+      },
+      {
+        name: "test_token_validation",
+        status: "passed",
+        duration: 0.12,
+      },
+      {
+        name: "test_oauth_callback",
+        status: "failed",
+        duration: 0.35,
+        error: "AssertionError: OAuth state parameter mismatch",
+      },
+    ],
+  },
+  {
+    id: "pytest-2-1-2",
+    name: "Integration Tests - Auth API",
+    test_status: "passed",
+    started_by: "mike.chen",
+    started_at: "2026-02-08T11:00:00Z",
+    release: "rel-2-1",
+    project_key: "user-auth",
+    duration: "4m 30s",
+    total_tests: 112,
+    passed_tests: 112,
+    failed_tests: 0,
+    skipped_tests: 0,
+    success_rate: 100.0,
+    test_cases: [
+      {
+        name: "test_login_endpoint",
+        status: "passed",
+        duration: 0.42,
+      },
+      {
+        name: "test_logout_endpoint",
+        status: "passed",
+        duration: 0.35,
+      },
+      {
+        name: "test_refresh_token_endpoint",
+        status: "passed",
+        duration: 0.38,
+      },
+    ],
+  },
+  // Product Catalog pytest — 1.8.0
+  {
+    id: "pytest-3-1-1",
+    name: "Unit Tests - Search & Filter",
+    test_status: "passed",
+    started_by: "ci-pipeline",
+    started_at: "2026-02-01T08:30:00Z",
+    release: "rel-3-1",
+    project_key: "product-catalog",
+    duration: "2m 20s",
+    total_tests: 178,
+    passed_tests: 178,
+    failed_tests: 0,
+    skipped_tests: 0,
+    success_rate: 100.0,
+    test_cases: [
+      {
+        name: "test_search_by_keyword",
+        status: "passed",
+        duration: 0.08,
+      },
+      {
+        name: "test_filter_by_price",
+        status: "passed",
+        duration: 0.06,
+      },
+      {
+        name: "test_filter_by_category",
+        status: "passed",
+        duration: 0.07,
+      },
+    ],
+  },
+  {
+    id: "pytest-3-1-2",
+    name: "Integration Tests - Search API",
+    test_status: "warning",
+    started_by: "alex.wong",
+    started_at: "2026-02-01T09:00:00Z",
+    release: "rel-3-1",
+    project_key: "product-catalog",
+    duration: "3m 45s",
+    total_tests: 95,
+    passed_tests: 92,
+    failed_tests: 2,
+    skipped_tests: 1,
+    success_rate: 96.84,
+    test_cases: [
+      {
+        name: "test_search_endpoint_performance",
+        status: "passed",
+        duration: 1.2,
+      },
+      {
+        name: "test_faceted_search",
+        status: "failed",
+        duration: 0.95,
+        error: "AssertionError: Facet counts incorrect",
+      },
+    ],
+  },
+  // Notification Service pytest — 4.0.0
+  {
+    id: "pytest-4-1-1",
+    name: "Unit Tests - Notification Queue",
+    test_status: "passed",
+    started_by: "ci-pipeline",
+    started_at: "2026-01-28T13:30:00Z",
+    release: "rel-4-1",
+    project_key: "notification-svc",
+    duration: "1m 50s",
+    total_tests: 142,
+    passed_tests: 141,
+    failed_tests: 0,
+    skipped_tests: 1,
+    success_rate: 99.29,
+    test_cases: [
+      {
+        name: "test_push_notification_creation",
+        status: "passed",
+        duration: 0.1,
+      },
+      {
+        name: "test_email_queue_priority",
+        status: "passed",
+        duration: 0.08,
+      },
+    ],
+  },
+  {
+    id: "pytest-4-1-2",
+    name: "End-to-End Tests - Notification Flow",
+    test_status: "failed",
+    started_by: "john.doe",
+    started_at: "2026-01-28T17:30:00Z",
+    release: "rel-4-1",
+    project_key: "notification-svc",
+    duration: "8m 15s",
+    total_tests: 67,
+    passed_tests: 59,
+    failed_tests: 6,
+    skipped_tests: 2,
+    success_rate: 88.06,
+    test_cases: [
+      {
+        name: "test_push_delivery",
+        status: "passed",
+        duration: 0.45,
+      },
+      {
+        name: "test_email_delivery",
+        status: "failed",
+        duration: 2.3,
+        error: "TimeoutError: Email delivery exceeded 30s timeout",
+      },
+      {
+        name: "test_sms_delivery",
+        status: "failed",
+        duration: 1.8,
+        error: "AssertionError: SMS provider returned error",
+      },
+    ],
+  },
+  // Order Management pytest — 5.1.0
+  {
+    id: "pytest-5-1-1",
+    name: "Unit Tests - Order Processing",
+    test_status: "passed",
+    started_by: "ci-pipeline",
+    started_at: "2026-02-09T09:30:00Z",
+    release: "rel-5-1",
+    project_key: "order-mgmt",
+    duration: "3m 05s",
+    total_tests: 189,
+    passed_tests: 188,
+    failed_tests: 1,
+    skipped_tests: 0,
+    success_rate: 99.47,
+    test_cases: [
+      {
+        name: "test_order_creation",
+        status: "passed",
+        duration: 0.15,
+      },
+      {
+        name: "test_inventory_reservation",
+        status: "passed",
+        duration: 0.22,
+      },
+      {
+        name: "test_payment_capture",
+        status: "failed",
+        duration: 0.38,
+        error: "AssertionError: Payment capture failed",
+      },
+    ],
+  },
+  {
+    id: "pytest-5-1-2",
+    name: "Integration Tests - Order API",
+    test_status: "failed",
+    started_by: "jane.smith",
+    started_at: "2026-02-09T10:45:00Z",
+    release: "rel-5-1",
+    project_key: "order-mgmt",
+    duration: "6m 30s",
+    total_tests: 124,
+    passed_tests: 110,
+    failed_tests: 12,
+    skipped_tests: 2,
+    success_rate: 88.71,
+    test_cases: [
+      {
+        name: "test_create_order_endpoint",
+        status: "passed",
+        duration: 0.52,
+      },
+      {
+        name: "test_get_order_status",
+        status: "passed",
+        duration: 0.38,
+      },
+      {
+        name: "test_update_order_status",
+        status: "failed",
+        duration: 0.85,
+        error: "TimeoutError: Order status update took > 5s",
+      },
+    ],
+  },
+]

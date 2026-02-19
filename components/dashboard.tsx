@@ -8,22 +8,30 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AppSidebar } from "@/components/app-sidebar"
 import { ReportDetail } from "@/components/report-detail"
 import { ReportList } from "@/components/report-list"
 import { EmptyState } from "@/components/empty-state"
+import { LoadTestResultsList } from "@/components/load-test-results-list"
+import { PytestResultsList } from "@/components/pytest-results-list"
+import { LoadTestDetail } from "@/components/load-test-detail"
+import { PytestDetail } from "@/components/pytest-detail"
 import { api } from "@/lib/api-client"
-import { Project, Release, Run, buildProjectTree } from "@/lib/mock-data"
+import { Project, Release, Run, buildProjectTree, mockPytestResults, PytestResult } from "@/lib/mock-data"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 export function Dashboard() {
+  const [selectedTab, setSelectedTab] = React.useState<"load-test" | "pytest">("load-test")
   const [selectedRunId, setSelectedRunId] = React.useState<string | null>(null)
+  const [selectedPytestId, setSelectedPytestId] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [projects, setProjects] = React.useState<Project[]>([])
   const [releases, setReleases] = React.useState<Release[]>([])
   const [runs, setRuns] = React.useState<Run[]>([])
   const [releasesByProject, setReleasesByProject] = React.useState<Record<string, Release[]>>({})
+  const [pytestResults, setPytestResults] = React.useState<PytestResult[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
 
   // Fetch all data on mount
@@ -64,6 +72,9 @@ export function Dashboard() {
         setReleasesByProject(releasesByProjectMap)
         setReleases(allReleases)
         setRuns(allRuns)
+        
+        // Load pytest results (using mock data for now)
+        setPytestResults(mockPytestResults)
       } catch (error) {
         console.error("Error fetching data:", error)
         toast.error("Failed to load data. Please try again.")
@@ -148,25 +159,68 @@ export function Dashboard() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6">
-          {selectedRun && selectedRelease && selectedProject ? (
-            <div className="flex flex-col gap-8">
-              <ReportDetail
-                run={selectedRun}
-                release={selectedRelease}
-                project={selectedProject}
-              />
-              <Separator className="bg-border" />
-              <ReportList
-                project={selectedProject}
-                release={selectedRelease}
-                runs={releaseRuns}
-                selectedRunId={selectedRunId}
-                onSelectRun={setSelectedRunId}
-              />
+          <Tabs value={selectedTab} onValueChange={(val) => setSelectedTab(val as "load-test" | "pytest")} className="w-full">
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-2xl font-bold">Test Results</h1>
+                <p className="text-sm text-muted-foreground">View load test and pytest results</p>
+              </div>
+              <TabsList className="grid w-fit grid-cols-2">
+                <TabsTrigger value="load-test" className="flex gap-2">
+                  <span>Load Tests</span>
+                </TabsTrigger>
+                <TabsTrigger value="pytest" className="flex gap-2">
+                  <span>Pytest</span>
+                </TabsTrigger>
+              </TabsList>
             </div>
-          ) : (
-            <EmptyState />
-          )}
+
+            <TabsContent value="load-test" className="space-y-6">
+              {selectedRun && selectedRelease && selectedProject ? (
+                <div className="flex flex-col gap-8">
+                  <ReportDetail
+                    run={selectedRun}
+                    release={selectedRelease}
+                    project={selectedProject}
+                  />
+                  <Separator className="bg-border" />
+                  <ReportList
+                    project={selectedProject}
+                    release={selectedRelease}
+                    runs={releaseRuns}
+                    selectedRunId={selectedRunId}
+                    onSelectRun={setSelectedRunId}
+                  />
+                </div>
+              ) : (
+                <LoadTestResultsList
+                  runs={runs}
+                  selectedRunId={selectedRunId}
+                  onSelectRun={setSelectedRunId}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="pytest" className="space-y-6">
+              {selectedPytestId && pytestResults.find(p => p.id === selectedPytestId) ? (
+                <div className="flex flex-col gap-8">
+                  <PytestDetail resultId={selectedPytestId} />
+                  <Separator className="bg-border" />
+                  <PytestResultsList
+                    results={pytestResults}
+                    selectedId={selectedPytestId}
+                    onSelectResult={setSelectedPytestId}
+                  />
+                </div>
+              ) : (
+                <PytestResultsList
+                  results={pytestResults}
+                  selectedId={selectedPytestId}
+                  onSelectResult={setSelectedPytestId}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
       </SidebarInset>
     </SidebarProvider>
